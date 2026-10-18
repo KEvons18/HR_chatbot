@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>HR Chatbot</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ---------- Design tokens (reuse these on the main HR System page) ---------- */
+    :root {
+      --bg: #eef2f6;
+      --surface: #ffffff;
+      --ink: #14202e;
+      --ink-soft: #5b6b7c;
+      --line: #d9e1e9;
+      --brand: #0f5c63;
+      --brand-dark: #0a4349;
+      --brand-tint: #e0f0f1;
+      --user-bubble: #0f5c63;
+      --danger: #a62f2f;
+      --radius: 14px;
+      --font: "Figtree", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body { height: 100%; margin: 0; }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--ink);
+      display: flex;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .app {
+      width: 100%;
+      max-width: 760px;
+      height: calc(100vh - 32px);
+      height: calc(100dvh - 32px);
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ---------- Header ---------- */
+    header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px 20px;
+      background: var(--brand);
+      color: #fff;
+    }
+    header h1 { font-size: 1.1rem; font-weight: 600; margin: 0; }
+    header p { margin: 2px 0 0; font-size: 0.85rem; opacity: 0.8; }
+    .header-text { flex: 1; }
+    .home-link {
+      color: #fff;
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 500;
+      padding: 8px 12px;
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      border-radius: 8px;
+    }
+    .home-link:hover { background: rgba(255, 255, 255, 0.12); }
+    .home-link[hidden] { display: none; }
+
+    /* ---------- Messages ---------- */
+    #messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .msg {
+      max-width: 82%;
+      padding: 10px 14px;
+      border-radius: var(--radius);
+      line-height: 1.5;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+    .msg.bot {
+      align-self: flex-start;
+      background: var(--brand-tint);
+      border-bottom-left-radius: 4px;
+    }
+    .msg.user {
+      align-self: flex-end;
+      background: var(--user-bubble);
+      color: #fff;
+      border-bottom-right-radius: 4px;
+    }
+    .msg.error {
+      align-self: flex-start;
+      background: #fbeaea;
+      color: var(--danger);
+      border-bottom-left-radius: 4px;
+    }
+
+    .typing { display: inline-flex; gap: 4px; align-items: center; height: 1.5em; }
+    .typing span {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--brand);
+      opacity: 0.35;
+      animation: blink 1.2s infinite;
+    }
+    .typing span:nth-child(2) { animation-delay: 0.2s; }
+    .typing span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes blink { 0%, 80%, 100% { opacity: 0.35; } 40% { opacity: 1; } }
+
+    /* ---------- Input ---------- */
+    form {
+      display: flex;
+      gap: 10px;
+      padding: 14px 16px;
+      border-top: 1px solid var(--line);
+      background: var(--surface);
+    }
+    textarea {
+      flex: 1;
+      resize: none;
+      font: inherit;
+      color: var(--ink);
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      max-height: 120px;
+    }
+    textarea::placeholder { color: var(--ink-soft); }
+    button.send {
+      font: inherit;
+      font-weight: 600;
+      color: #fff;
+      background: var(--brand);
+      border: 0;
+      border-radius: 10px;
+      padding: 0 20px;
+      cursor: pointer;
+    }
+    button.send:hover:not(:disabled) { background: var(--brand-dark); }
+    button.send:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    textarea:focus-visible, button:focus-visible, a:focus-visible {
+      outline: 3px solid #7ec4c9;
+      outline-offset: 2px;
+    }
+
+    @media (max-width: 520px) {
+      body { padding: 0; }
+      .app { height: 100vh; height: 100dvh; border: 0; border-radius: 0; }
+      .msg { max-width: 92%; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .typing span { animation: none; opacity: 0.7; }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="app">
+    <header>
+      <div class="header-text">
+        <h1>HR Chatbot</h1>
+        <p>Ask about policies, leave, benefits and more.</p>
+      </div>
+      <a id="home-link" class="home-link" href="#" hidden>HR System</a>
+    </header>
+
+    <div id="messages" aria-live="polite"></div>
+
+    <form id="chat-form">
+      <textarea id="input" rows="1" placeholder="Type your question..." aria-label="Your question" required></textarea>
+      <button class="send" id="send" type="submit">Send</button>
+    </form>
+  </main>
+
+  <script>
+    /* =====================================================
+       CONFIG: edit these values
+       ===================================================== */
+    const CONFIG = {
+      // Paste your PRODUCTION URL from n8n (not the Test URL).
+      //   Chat Trigger example: https://your-n8n.com/webhook/xxxxxxxx/chat
+      //   Webhook example:      https://your-n8n.com/webhook/hr-chat
+      WEBHOOK_URL: "https://bigman101.app.n8n.cloud/webhook/2d53eaf1-1e95-410d-bd19-072af389a7aa/chat",
+
+      // "chat-trigger" -> workflow starts with the "When chat message received" node
+      // "webhook"      -> workflow starts with a Webhook node
+      MODE: "chat-trigger",
+
+      // Optional: link back to the main HR System page (leave "" to hide the button).
+      HOME_URL: "",
+
+      WELCOME: "Hi, I'm the HR assistant. What would you like to know?"
+    };
+
+    /* ===================================================== */
+
+    const messagesEl = document.getElementById("messages");
+    const form = document.getElementById("chat-form");
+    const input = document.getElementById("input");
+    const sendBtn = document.getElementById("send");
+    const homeLink = document.getElementById("home-link");
+
+    if (CONFIG.HOME_URL) {
+      homeLink.href = CONFIG.HOME_URL;
+      homeLink.hidden = false;
+    }
+
+    // One session id per browser tab, so the bot can keep conversation memory.
+    const sessionId = (crypto.randomUUID && crypto.randomUUID()) || String(Date.now()) + Math.random();
+
+    function addMessage(text, type) {
+      const el = document.createElement("div");
+      el.className = "msg " + type;
+      el.textContent = text;
+      messagesEl.appendChild(el);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+      return el;
+    }
+
+    function addTyping() {
+      const el = document.createElement("div");
+      el.className = "msg bot";
+      el.innerHTML = '<span class="typing" aria-label="The assistant is typing"><span></span><span></span><span></span></span>';
+      messagesEl.appendChild(el);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+      return el;
+    }
+
+    function buildBody(text) {
+      if (CONFIG.MODE === "webhook") {
+        return { message: text, sessionId: sessionId };
+      }
+      // n8n Chat Trigger format
+      return { action: "sendMessage", sessionId: sessionId, chatInput: text };
+    }
+
+    function extractReply(data) {
+      if (typeof data === "string") return data;
+      if (Array.isArray(data)) data = data[0];
+      if (!data) return "";
+      return data.output || data.reply || data.text || data.message || JSON.stringify(data);
+    }
+
+    async function sendMessage(text) {
+      const res = await fetch(CONFIG.WEBHOOK_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(buildBody(text))
+      });
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      const raw = await res.text();
+      try { return extractReply(JSON.parse(raw)); }
+      catch (e) { return raw; }
+    }
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const text = input.value.trim();
+      if (!text) return;
+
+      addMessage(text, "user");
+      input.value = "";
+      input.style.height = "auto";
+      input.disabled = true;
+      sendBtn.disabled = true;
+
+      const typing = addTyping();
+      try {
+        const reply = await sendMessage(text);
+        typing.remove();
+        addMessage(reply || "I didn't get an answer. Please try again.", "bot");
+      } catch (err) {
+        typing.remove();
+        addMessage("Couldn't reach the HR assistant (" + err.message + "). Check your connection and try again.", "error");
+        console.error(err);
+      } finally {
+        input.disabled = false;
+        sendBtn.disabled = false;
+        input.focus();
+      }
+    });
+
+    // Enter sends, Shift+Enter adds a new line
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        form.requestSubmit();
+      }
+    });
+
+    // Auto-grow the textarea
+    input.addEventListener("input", () => {
+      input.style.height = "auto";
+      input.style.height = Math.min(input.scrollHeight, 120) + "px";
+    });
+
+    addMessage(CONFIG.WELCOME, "bot");
+    input.focus();
+  </script>
+</body>
+</html>
